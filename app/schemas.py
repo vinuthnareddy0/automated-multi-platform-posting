@@ -28,6 +28,9 @@ class PostingRequest(BaseModel):
 
         url = urls[0].rstrip(".,!?;:)]}")
 
+        if url.lower().startswith("www."):
+            url = "https://" + url
+
         try:
             url_adapter.validate_python(url)
         except Exception:

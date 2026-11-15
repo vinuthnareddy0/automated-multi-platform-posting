@@ -2,6 +2,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.schemas import PostingResponse, PlatformResult
 
 client = TestClient(app)
 
@@ -44,7 +45,23 @@ def test_rejects_message_over_200_characters():
     assert response.status_code == 422
 
 
-def test_accepts_valid_message():
+def test_accepts_valid_message(monkeypatch):
+    async def fake_publish_message(message):
+        return PostingResponse(
+            success=True,
+            results=[
+                PlatformResult(
+                    platform="Telegram",
+                    status="success"
+                )
+            ]
+        )
+
+    monkeypatch.setattr(
+        "app.main.publish_message",
+        fake_publish_message
+    )
+
     response = client.post(
         "/posting",
         json={
@@ -53,3 +70,5 @@ def test_accepts_valid_message():
     )
 
     assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert response.json()["results"][0]["platform"] == "Telegram"
