@@ -24,11 +24,18 @@ async def post_to_slack(message: str) -> PlatformResult:
                 json={"text": message}
             )
 
-        if response.status_code != 200 or response.text.strip() != "ok":
+        if response.status_code != 200:
             return PlatformResult(
                 platform="Slack",
                 status="failed",
-                error=f"Slack returned HTTP {response.status_code}: {response.text[:200]}"
+                error=f"Slack returned HTTP {response.status_code}"
+            )
+
+        if response.text.strip() != "ok":
+            return PlatformResult(
+                platform="Slack",
+                status="failed",
+                error="Slack rejected the message"
             )
 
         published_at = datetime.now(timezone.utc)

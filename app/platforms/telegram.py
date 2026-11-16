@@ -30,22 +30,32 @@ async def post_to_telegram(message: str) -> PlatformResult:
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post(api_url, json=payload)
 
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError:
+            return PlatformResult(
+                platform="Telegram",
+                status="failed",
+                error="Invalid response from Telegram API"
+            )
 
         if response.status_code != 200 or not data.get("ok"):
             return PlatformResult(
                 platform="Telegram",
                 status="failed",
-                error=data.get("description", "Telegram API request failed")
+                error=data.get(
+                    "description",
+                    "Telegram API request failed"
+                )
             )
 
         posted_message = data["result"]
         chat = posted_message["chat"]
         message_id = posted_message["message_id"]
 
-        # Telegram returns the actual message publication timestamp.
         published_at = datetime.fromtimestamp(
-            posted_message["date"], tz=timezone.utc
+            posted_message["date"],
+            tz=timezone.utc
         )
 
         posted_url = None
@@ -56,6 +66,7 @@ async def post_to_telegram(message: str) -> PlatformResult:
                 f"https://t.me/{chat['username']}/{message_id}"
             )
             public_access = True
+
         elif str(chat["id"]).startswith("-100"):
             channel_id = str(chat["id"])[4:]
             posted_url = f"https://t.me/c/{channel_id}/{message_id}"
@@ -77,14 +88,14 @@ async def post_to_telegram(message: str) -> PlatformResult:
             error="Telegram request timed out"
         )
 
-    except httpx.RequestError as exc:
+    except httpx.RequestError:
         return PlatformResult(
             platform="Telegram",
             status="failed",
-            error=f"Network error: {exc}"
+            error="Unable to connect to Telegram"
         )
 
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, TypeError):
         return PlatformResult(
             platform="Telegram",
             status="failed",

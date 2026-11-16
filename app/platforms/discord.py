@@ -25,33 +25,37 @@ async def post_to_discord(message: str) -> PlatformResult:
                 json={"content": message}
             )
 
-        if response.status_code != 200:
+        if response.status_code not in (200, 201):
             return PlatformResult(
                 platform="Discord",
                 status="failed",
-                error=(
-                    f"Discord returned HTTP {response.status_code}: "
-                    f"{response.text[:300]}"
-                )
+                error=f"Discord returned HTTP {response.status_code}"
             )
 
-        posted_message = response.json()
+        try:
+            posted_message = response.json()
 
-        message_id = posted_message.get("id")
-        channel_id = posted_message.get("channel_id")
-        guild_id = posted_message.get("guild_id")
-        timestamp = posted_message.get("timestamp")
+            message_id = posted_message.get("id")
+            channel_id = posted_message.get("channel_id")
+            guild_id = posted_message.get("guild_id")
+            timestamp = posted_message.get("timestamp")
 
-        if not message_id or not channel_id or not timestamp:
+            if not message_id or not channel_id or not timestamp:
+                raise ValueError("Missing message details")
+
+            published_at = datetime.fromisoformat(
+                timestamp.replace("Z", "+00:00")
+            )
+
+            if published_at.tzinfo is None:
+                published_at = published_at.replace(tzinfo=timezone.utc)
+
+        except (ValueError, TypeError, AttributeError):
             return PlatformResult(
                 platform="Discord",
                 status="failed",
-                error="Discord published the request but returned incomplete message details"
+                error="Invalid or incomplete response from Discord"
             )
-
-        published_at = datetime.fromisoformat(
-            timestamp.replace("Z", "+00:00")
-        )
 
         posted_url = None
 
@@ -82,11 +86,4 @@ async def post_to_discord(message: str) -> PlatformResult:
             platform="Discord",
             status="failed",
             error="Could not connect to Discord"
-        )
-
-    except (ValueError, KeyError, TypeError) as error:
-        return PlatformResult(
-            platform="Discord",
-            status="failed",
-            error=f"Could not process Discord response: {str(error)}"
         )

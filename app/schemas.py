@@ -1,7 +1,7 @@
 import re
 
 from pydantic import BaseModel, Field, field_validator, HttpUrl, TypeAdapter
-
+from typing import Literal
 
 url_adapter = TypeAdapter(HttpUrl)
 
@@ -41,7 +41,7 @@ class PostingRequest(BaseModel):
 
 class PlatformResult(BaseModel):
     platform: str
-    status: str
+    status: Literal["success","failed"]
     posted_url: str | None = None
     public_access: bool = False
     date: str | None = None

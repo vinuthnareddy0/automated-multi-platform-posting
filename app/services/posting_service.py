@@ -34,6 +34,16 @@ async def publish_message(message: str) -> PostingResponse:
                     error="Unexpected error while publishing"
                 )
             )
+
+        elif not isinstance(result, PlatformResult):
+            platform_results.append(
+                PlatformResult(
+                    platform=platform,
+                    status="failed",
+                    error="Invalid response from platform integration"
+                )
+            )
+
         else:
             platform_results.append(result)
 
